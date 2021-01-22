@@ -14,65 +14,80 @@ int Relay = 3;
 int tempDelay = 5;
 int lastMillis = 0;
 
-int h = 0;
 int t = 0;
+
+bool warmerOn = false;    //app에서 warmer button의 On/Off 상태
+bool relayOn = false;     //arduino에서 relay의 On/Off 상태
 
 void setup()
 {
- Serial.begin(9600);//시리얼 초기화
- while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
- Serial.println("Serial Conn!");
- bluetooth.begin(9600); //소프트웨어 시리얼 통신
+  Serial.begin(9600);//시리얼 초기화
+    while (!Serial) {
+     ; // wait for serial port to connect. Needed for native USB port only
+    }
+  Serial.println("Serial Conn!");
+  bluetooth.begin(9600); //소프트웨어 시리얼 통신
 
- pinMode(Relay, OUTPUT); //Set Pin3 as output
+  pinMode(Relay, OUTPUT); //Set Pin3 as output
 }
-
-char android;
 
 void loop()
 {
+  if(millis()/1000 - lastMillis > tempDelay){
+    lastMillis = millis()/1000;
+    t = dht.readTemperature();
+    Serial.print("Temperature: ");
+    Serial.print(t);
+    Serial.println(" C");
+  }
+
   if(bluetooth.available()){
-    android = bluetooth.read();
-
-    delay(500);
+    char input = bluetooth.read();
     
-    Serial.write(android);
-  
+    switch(input){
+      case '1' :
+        Serial.println("Warmer On");
+        digitalWrite(Relay, HIGH);
+        warmerOn = true;
+        relayOn = true;
+        break;
+      case '2' :
+        Serial.println("Warmer Off");
+        digitalWrite(Relay, LOW);
+        warmerOn = false;
+        relayOn = false;
+        break;
+      case '3' :
+        byte bytes[5];
+        bytes[0] = relayOn;
+        
+        bytes[1] = (t >> 24) & 0xFF;
+        bytes[2] = (t >> 16) & 0xFF;
+        bytes[3] = (t >> 8) & 0xFF;
+        bytes[4] = t & 0xFF;
+        
+        bluetooth.write(bytes, 5);
+        
+        break;
+    } 
+
+    if(warmerOn && relayOn){
+       if(t >= 30){
+          digitalWrite(Relay, LOW);
+          warmerOn = true;
+          relayOn = false;
+       }
+    }else if(warmerOn && !relayOn){
+      if(t <= 25){
+          digitalWrite(Relay, HIGH);
+          warmerOn = true;
+          relayOn = true;
+       }
+    }
+    
+    delay(500);
   }
-
-  if(Serial.available()){
-    bluetooth.write(Serial.read());
-  }
-
-
-
-
-
-
-
-
-
-  
-//  if(millis()/1000 - lastMillis > tempDelay){
-//      lastMillis = millis()/1000;
-//      
-//      h = dht.readHumidity();
-//      t = dht.readTemperature();
-//      Serial.print("Humidity: ");
-//      Serial.print(h);
-//      Serial.print(" %\t");
-//      Serial.print("Temperature: ");
-//      Serial.print(t);
-//      Serial.println(" C");
-//  }
-//
-//  if(t <= 35){
-//      digitalWrite(Relay, HIGH); //Turn off relay
-//  }else{
-//      digitalWrite(Relay, LOW); //Turn on relay
-//  }
-  
-
+//  if(Serial.available()){
+//    bluetooth.write(Serial.read());
+//  }  
 } 
