@@ -78,7 +78,7 @@ void loop()
           relayOn = false;
        }
     }else if(warmerOn && !relayOn){
-      if(t <= 25){
+       if(t <= 27){
           digitalWrite(Relay, HIGH);
           warmerOn = true;
           relayOn = true;
@@ -87,7 +87,4 @@ void loop()
     
     delay(500);
   }
-//  if(Serial.available()){
-//    bluetooth.write(Serial.read());
-//  }  
 } 
